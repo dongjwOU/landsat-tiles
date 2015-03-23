@@ -1,41 +1,36 @@
-import arcpy
-import numpy
+
+import os
+import gf
+
+from joblib import Parallel, delayed
+import multiprocessing
 
 
-# Get input Raster properties
 
-scenes = ["00N_000E", "00N_010E", "00N_020E", "00N_030E",
-          "10N_000E", "10N_010E", "10N_020E", "10N_030E",
-          "10S_010E", "10S_020E", "10S_030E",
-          "20S_000E", "20S_010E", "20S_020E", "20S_030E"]
 
-years = range(2000,2014)
+def gap_fill_scenes(scene):
 
-bands = [30, 40, 50, 70]
+    years = range(1999,2014)
 
-for scene in scenes:
-    for year in years:
+    index = range(0,100)
 
-        a = None
 
-        for band in bands:
-            r1 = arcpy.Raster('%s_%i_%i.tif' % (scene, year-1, band))
-            r2 = arcpy.Raster('%s_%i_%i.tif' % (scene, year, band))
 
-            lowerLeft = arcpy.Point(r1.extent.XMin,r1.extent.YMin)
-            cellSize = r1.meanCellWidth
 
-            # Convert Raster to numpy array
-            a1 = arcpy.RasterToNumPyArray(r1,nodata_to_value=0)
-            a2 = arcpy.RasterToNumPyArray(r2,nodata_to_value=0)
+    for i in index:
+        if os.path.exists(r'G:\UMD_Landsat_tiles\1999\%s_1999_30_%i.tif' % (scene, i)):
+            for year in years:
+                gf.gf(scene, year, i)
 
-            a3 = np.expand_dims(np.where(a2==0,a1,a2), axis=0)
-            
-            if not a:
-                a = a3
-            else:
-                a = np.vstack((a,a3))
 
-        #Convert Array to raster (keep the origin and cellsize the same as the input)
-        r = arcpy.NumPyArrayToRaster(a,lowerLeft,cellSize,value_to_nodata=0)
-        r.save('%s_%i_filled.tif' % (scene, year))
+if __name__ == '__main__':
+
+
+	scenes = ["00N_000E", "00N_010E", "00N_020E", "00N_030E",
+              "10N_000E", "10N_010E", "10N_020E", "10N_030E",
+              "10S_010E", "10S_020E", "10S_030E",
+              "20S_000E", "20S_010E", "20S_020E", "20S_030E"]
+
+	num_cores = multiprocessing.cpu_count()
+	Parallel(n_jobs=num_cores)(delayed(gap_fill_scenes)(scene) for scene in scenes)
+	raw_input('Press Enter to exit')
